@@ -455,7 +455,6 @@ button:disabled {
       <div class="note">先用鼠标旋转到想要的角度，再点击按钮进行反射动画</div>
     </div>
 
-    <!-- 任务一：C2H2Cl2 操作面板，新增 σh 按钮 -->
     <div class="section" id="c2h2cl2SpecialSection">
       <div class="section-title">C₂H₂Cl₂ 对称操作动画（支持视角保持）</div>
       <button id="btnC2H2Cl2Inversion" class="inversion-btn" onclick="playC2H2Cl2Inversion()">播放反演操作 i</button>
@@ -517,7 +516,6 @@ button:disabled {
       <div class="note">先用鼠标旋转到想要的角度，再点击按钮进行C₃旋转</div>
     </div>
 
-    <!-- 环己烷 σd 镜面操作演示面板 -->
     <div class="section hidden" id="cyclohexaneSigmaDSection">
       <div class="section-title">环己烷椅式构型（D₃d）σd 镜面操作</div>
       <button id="btnSigmaD1" class="sigmad-btn" onclick="playCyclohexaneSigmaD1()">σd₁（C1↔C5, C2↔C4）</button>
@@ -530,7 +528,6 @@ button:disabled {
       </div>
     </div>
 
-    <!-- 任务二：CH3-CCl3 σh 操作演示面板 -->
     <div class="section hidden" id="ch3ccl3SpecialSection">
       <div class="section-title">CH₃–CCl₃ σᵥ 旋转反射动画</div>
       <button id="btnCH3CCl3SH1" class="ch3ccl3-sh-btn" onclick="playCH3CCl3SH1()">σᵥ₁（H7↔H8，Cl2↔Cl3）</button>
@@ -539,7 +536,6 @@ button:disabled {
       <div class="note">先用鼠标旋转到想要的角度，再点击按钮进行σᵥ反射动画</div>
     </div>
 
-    <!-- S₆ 操作演示 -->
     <div class="section hidden" id="cyclohexaneS6Section">
       <div class="section-title">环己烷椅式构型 S₆ 旋转反射轴（D₃d）</div>
       <button id="btnS6Full" class="s6-btn" onclick="playCyclohexaneS6Full()">
@@ -561,7 +557,6 @@ button:disabled {
       </div>
     </div>
 
-    <!-- 苯 D6h 对称操作演示面板 -->
     <div class="section hidden" id="benzeneSpecialSection">
       <div class="section-title">苯（D₆ʰ）对称操作动画</div>
 
@@ -589,7 +584,6 @@ button:disabled {
       </div>
     </div>
 
-    <!-- PtCl₄²⁻ D4h 对称操作演示面板 -->
     <div class="section hidden" id="ptcl4SpecialSection">
       <div class="section-title">[PtCl₄]²⁻（D₄ʰ）对称操作动画</div>
 
@@ -666,8 +660,6 @@ button:disabled {
     <div class="section">
       <div class="section-title">视图控制</div>
       <button onclick="resetView()">重置视图</button>
-      <button onclick="Jmol.script(myJmol, 'spin on;')">自动旋转</button>
-      <button onclick="Jmol.script(myJmol, 'spin off;')">停止旋转</button>
       <button id="btnTogglePG" class="pg-annot-btn" onclick="togglePointGroupAnnotation()">显示点群标注</button>
       <div class="note">重置视图可以恢复分子的原始状态；点群标注会高亮对称轴与镜面</div>
     </div>
@@ -675,7 +667,6 @@ button:disabled {
   </div>
 </div>
 
-<!-- 恒等操作全局提示遮罩 -->
 <div id="identity-overlay" class="identity-overlay">
   <div class="identity-dialog">
     <div id="identity-content"></div>
@@ -2015,12 +2006,12 @@ function _pgBaseLoadScript(savedOriName) {
  * 显示或隐藏当前分子的点群标注。
  *
  * 设计约束（不与其他操作冲突）：
- *   • 本函数从不修改 isAnimating。
- *   • 其他操作进行中（isAnimating = true）时，静默返回，按钮不响应。
- *   • 用 _pgAnnotationComputing 防止本函数自身重入。
- *   • 显示时先 save orientation → 重载干净模型 → calculate+draw → restore orientation，
- *     全程视角不变、不影响其他操作的基础模型状态。
- *   • 隐藏时仅发 draw pointgroup off，零副作用。
+ * • 本函数从不修改 isAnimating。
+ * • 其他操作进行中（isAnimating = true）时，静默返回，按钮不响应。
+ * • 用 _pgAnnotationComputing 防止本函数自身重入。
+ * • 显示时先 save orientation → 重载干净模型 → calculate+draw → restore orientation，
+ * 全程视角不变、不影响其他操作的基础模型状态。
+ * • 隐藏时仅发 draw pointgroup off，零副作用。
  */
 function togglePointGroupAnnotation() {
   // 其他操作进行中，或本函数正在计算中，直接忽略
@@ -2332,7 +2323,7 @@ function playCHCl3SigmaV31() {
 //   第2次：C₂′(z)  — 旋转轴沿 z 方向，两 O 原子在 xy 平面弧线运动（穿越 ±y）
 //   第3次：C₂′(yz 45°) — 旋转轴在 yz 平面 45° 方向，O 原子走对角线弧
 // 终态：O1↔O2 互换，C 始终不动（在旋转轴上）。
-// 用 translateSelected 逐帧沿正弦弧驱动，完整还原旋转路径。
+// 用 translateSelected 动画，明确展示原子路径。
 // ================================================================
 
 var co2C2primeClickCount = 0;   // 0-based, mod 3 to get click index
