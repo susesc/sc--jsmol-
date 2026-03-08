@@ -438,6 +438,8 @@ button:disabled {
       <button class="pg-btn" onclick="selectPointGroup('D3d')">D₃d 点群</button>
       <button class="pg-btn" onclick="selectPointGroup('D5d')">D₅d 点群</button>
       <button class="pg-btn" onclick="selectPointGroup('Td')">T<sub>d</sub> 点群</button>
+     <button class="pg-btn" onclick="selectPointGroup('Ih')">I<sub>h</sub> 点群</button>
+     <button class="pg-btn" onclick="selectPointGroup('Oh')">O<sub>h</sub> 点群</button>
       <div class="status-indicator" id="pg-status">当前显示: 全部分子</div>
     </div>
 
@@ -702,7 +704,13 @@ var molecules = [
   {file: "PtCl4(e2-).mol", displayName: "PtCl₄²⁻", pointGroup: "D4h", cnList: [4,2]},
   {file: "cyclohexane_chair.xyz", displayName: "环己烷椅式构型", pointGroup: "D3d", cnList: [3,2]},
   {file: "ferrocene.xyz", displayName: "二茂铁", pointGroup: "D5d", cnList: [5,2]},
-  {file: "tetrahedron.xyz", displayName: "正四面体", pointGroup: "Td", cnList: [3,2]}
+  {file: "tetrahedron.xyz", displayName: "正四面体", pointGroup: "Td", cnList: [3,2]},
+  {file: "(CH2)6N4.mol", displayName: "(CH₂)₆N₄", pointGroup: "Td", cnList: [3,2]},
+  {file: "B12H12(2-).mol", displayName: "B₁₂H₁₂²⁻", pointGroup: "Ih", cnList: [5,3,2]},
+  {file: "C8H8.mol", displayName: "C₈H₈", pointGroup: "Oh", cnList: [4,3,2]},
+  {file: "CH4.mol", displayName: "CH₄", pointGroup: "Td", cnList: [3,2]},
+  {file: "N4S4F4.mol", displayName: "N₄S₄F₄", pointGroup: "D4h", cnList: [4,2]},   // 根据常见结构假设 D4h
+  {file: "SF6.mol", displayName: "SF₆", pointGroup: "Oh", cnList: [4,3,2]}
 ];
 
 var pointGroupText = {
@@ -721,7 +729,12 @@ var pointGroupText = {
   "SbCl5(e2-).mol":  { name:"D₃ʰ", text:"SbCl₅²⁻ 为三角双锥构型，属于 D₃ʰ 点群。" },
   "cyclohexane_chair.xyz": { name:"D₃d", text:"环己烷椅式构型属于 D₃d 点群，具有一个 C₃ 主轴、三个 C₂ 轴、反演中心 i 和三个 σd 镜面。其 S₆ 非真旋转轴（S₆ = C₆·σₕ）是该点群的重要对称元素。" },
   "ferrocene.xyz":         { name:"D₅d", text:"二茂铁（交错构型）属于 D₅d 点群，具有一个 C₅ 主轴、五个 C₂ 轴、反演中心和镜面等对称元素。" },
-  "tetrahedron.xyz": { name:"T<sub>d</sub>", text:"正四面体属于 T<sub>d</sub> 点群。它具有 4 条 C₃ 轴（过顶角）、3 条 C₂ 轴（过对边中点连线），以及 3 条 S₄ 轴和 6 个 σ<sub>d</sub> 镜面。本演示通过多面体渲染展示其封闭结构。" }
+  "tetrahedron.xyz":       { name:"T<sub>d</sub>", text:"正四面体属于 T<sub>d</sub> 点群。它具有 4 条 C₃ 轴（过顶角）、3 条 C₂ 轴（过对边中点连线），以及 3 条 S₄ 轴和 6 个 σ<sub>d</sub> 镜面。本演示通过多面体渲染展示其封闭结构。" },  "(CH2)6N4.mol":          { name:"T<sub>d</sub>", text:"乌洛托品（六亚甲基四胺）属于 T<sub>d</sub> 点群，具有 4 条 C₃ 轴和 3 条 C₂ 轴。" },
+  "B12H12(2-).mol":        { name:"I<sub>h</sub>", text:"B₁₂H₁₂²⁻ 为闭式十二硼烷阴离子，具有二十面体对称性，属于 I<sub>h</sub> 点群，包含 C₅、C₃、C₂ 旋转轴及反演中心等对称元素。" },
+  "C8H8.mol":              { name:"O<sub>h</sub>", text:"立方烷（C₈H₈）具有 O<sub>h</sub> 对称性，包含 C₄、C₃、C₂ 旋转轴及反演中心。" },
+  "CH4.mol":               { name:"T<sub>d</sub>", text:"甲烷属于 T<sub>d</sub> 点群，具有 4 条 C₃ 轴和 3 条 C₂ 轴以及多个 σ<sub>d</sub> 镜面。" },
+  "N4S4F4.mol":            { name:"D<sub>4h</sub>", text:"N₄S₄F₄ 可能具有 D<sub>4h</sub> 对称性，包含 C₄ 主轴、C₂ 轴、水平镜面和垂直镜面等。" },
+  "SF6.mol":               { name:"O<sub>h</sub>", text:"六氟化硫属于 O<sub>h</sub> 点群，具有八面体构型，包含 C₄、C₃、C₂ 旋转轴及反演中心。" }
 };
 
 // ================================================================
