@@ -7,6 +7,7 @@
 <style>
 body {
   margin: 0;
+ margin-right: 120px; 
   font-family: "Inter","Segoe UI",Arial,Helvetica,sans-serif;
   background: #f3f4f6;
   color: #374151;
@@ -404,6 +405,14 @@ button:disabled {
 }
 .identity-confirm-btn:hover {
   background: linear-gradient(180deg,#fecaca,#fca5a5);
+}
+#suseLogo {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 80px;
+  z-index: 999;
 }
 </style>
 </head>
@@ -3902,6 +3911,6 @@ window.addEventListener('resize', function() {
   Jmol.script(myJmol, 'refresh');
 });
 </script>
-
+<img src="suse.png" id="suseLogo">
 </body>
 </html>
