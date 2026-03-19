@@ -625,6 +625,15 @@ button:disabled {
       </div>
     </div>
 
+    <!-- 新增：N4S4F4 三条 C2 轴旋转（参照乙烯） -->
+    <div class="section hidden" id="n4s4f4C2Section">
+      <div class="section-title">N₄S₄F₄（D₄ʰ）三条 C₂ 旋转轴</div>
+      <button id="btnN4S4F4C2_1" class="ethylene-c2-btn" onclick="doN4S4F4C2(1)">C₂₁ 轴</button>
+      <button id="btnN4S4F4C2_2" class="ethylene-c2-btn" onclick="doN4S4F4C2(2)">C₂₂ 轴</button>
+      <button id="btnN4S4F4C2_3" class="ethylene-c2-btn" onclick="doN4S4F4C2(3)">C₂₃ 轴</button>
+      <div class="note">三条 C₂ 轴，演示旋转 180° 后原子互换</div>
+    </div>
+
     <div class="section hidden" id="ferroceneSpecialSection">
       <div class="section-title">二茂铁（D₅d）对称操作动画</div>
 
@@ -736,7 +745,8 @@ var pointGroupText = {
   "SbCl5(e2-).mol":  { name:"D₃ʰ", text:"SbCl₅²⁻ 为三角双锥构型，属于 D₃ʰ 点群。" },
   "cyclohexane_chair.xyz": { name:"D₃d", text:"环己烷椅式构型属于 D₃d 点群，具有一个 C₃ 主轴、三个 C₂ 轴、反演中心 i 和三个 σd 镜面。其 S₆ 非真旋转轴（S₆ = C₆·σₕ）是该点群的重要对称元素。" },
   "ferrocene.xyz":         { name:"D₅d", text:"二茂铁（交错构型）属于 D₅d 点群，具有一个 C₅ 主轴、五个 C₂ 轴、反演中心和镜面等对称元素。" },
-  "tetrahedron.xyz":       { name:"T<sub>d</sub>", text:"正四面体属于 T<sub>d</sub> 点群。它具有 4 条 C₃ 轴（过顶角）、3 条 C₂ 轴（过对边中点连线），以及 3 条 S₄ 轴和 6 个 σ<sub>d</sub> 镜面。本演示通过多面体渲染展示其封闭结构。" },  "(CH2)6N4.mol":          { name:"T<sub>d</sub>", text:"乌洛托品（六亚甲基四胺）属于 T<sub>d</sub> 点群，具有 4 条 C₃ 轴和 3 条 C₂ 轴。" },
+  "tetrahedron.xyz":       { name:"T<sub>d</sub>", text:"正四面体属于 T<sub>d</sub> 点群。它具有 4 条 C₃ 轴（过顶角）、3 条 C₂ 轴（过对边中点连线），以及 3 条 S₄ 轴和 6 个 σ<sub>d</sub> 镜面。本演示通过多面体渲染展示其封闭结构。" },
+  "(CH2)6N4.mol":          { name:"T<sub>d</sub>", text:"乌洛托品（六亚甲基四胺）属于 T<sub>d</sub> 点群，具有 4 条 C₃ 轴和 3 条 C₂ 轴。" },
   "B12H12(2-).mol":        { name:"I<sub>h</sub>", text:"B₁₂H₁₂²⁻ 为闭式十二硼烷阴离子，具有二十面体对称性，属于 I<sub>h</sub> 点群，包含 C₅、C₃、C₂ 旋转轴及反演中心等对称元素。" },
   "C8H8.mol":              { name:"O<sub>h</sub>", text:"立方烷（C₈H₈）具有 O<sub>h</sub> 对称性，包含 C₄、C₃、C₂ 旋转轴及反演中心。" },
   "CH4.mol":               { name:"T<sub>d</sub>", text:"甲烷属于 T<sub>d</sub> 点群，具有 4 条 C₃ 轴和 3 条 C₂ 轴以及多个 σ<sub>d</sub> 镜面。" },
@@ -1438,11 +1448,13 @@ function updateSpecialSectionVisibility() {
   const benzeneSection = document.getElementById("benzeneSpecialSection");
   const ptcl4Section = document.getElementById("ptcl4SpecialSection");
   const tetraSection = document.getElementById("tetrahedronSpecialSection");
+  const n4s4f4Section = document.getElementById("n4s4f4C2Section"); // 新增
 
   [h2oSection, c2h2cl2Section, chcl3Section, co2Section,
    ethyleneC2Section, ethyleneSpecialSection, cyclohexaneSection,
    cyclohexaneS6Section, cyclohexaneSigmaDSection, ferroceneSection,
-   bf3Section, ch3ccl3Section, benzeneSection, ptcl4Section, tetraSection
+   bf3Section, ch3ccl3Section, benzeneSection, ptcl4Section, tetraSection,
+   n4s4f4Section // 新增
   ].forEach(s => s && s.classList.add("hidden"));
 
   if (currentFile === 'water.xyz') {
@@ -1473,6 +1485,8 @@ function updateSpecialSectionVisibility() {
   } else if (currentFile === 'tetrahedron.xyz') {
     const ts = document.getElementById("tetrahedronSpecialSection");
     if (ts) ts.classList.remove("hidden");
+  } else if (currentFile === 'N4S4F4.mol') {  // 新增
+    n4s4f4Section.classList.remove("hidden");
   }
 }
 
@@ -2120,6 +2134,11 @@ function doCnWithReset(n) {
 function playSigmaVxz() {
   if (currentFile !== 'water.xyz' || isAnimating) return;
   isAnimating = true;
+
+  // 【新增】删除旧平面，绘制 xz 平面（黄色，透明度 0.6）
+  Jmol.script(myJmol, "isosurface delete");
+  Jmol.script(myJmol, "isosurface plane1 plane {0 1 0} 0 translucent 0.6 color yellow");
+
   const btn = document.getElementById("btnSigmaV");
   btn.disabled = true;
   btn.classList.add("active");
@@ -2160,6 +2179,11 @@ function playSigmaVxz() {
       document.getElementById('op-status').textContent = "可用操作: C₂";
     }, 1500);
   }, (steps * delayPerStep + 1.1) * 1000);
+
+  // 【新增】2 秒后删除平面
+  setTimeout(function() {
+    Jmol.script(myJmol, "isosurface delete");
+  }, 2000);
 }
 
 function playSigmaPrimeVyz() {
@@ -3896,6 +3920,58 @@ function resetView() {
     if (btn) btn.textContent = 'C₂′(∞) 旋转';
   }
   resetAndLoadMol(currentFile, currentDisplayName);
+}
+
+// ================================================================
+// 新增：N4S4F4 的三条 C2 轴旋转（参照乙烯）
+// ================================================================
+function setN4S4F4Buttons(disabled, activeId) {
+  const ids = ['btnN4S4F4C2_1', 'btnN4S4F4C2_2', 'btnN4S4F4C2_3'];
+  ids.forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = disabled;
+    btn.classList.toggle('active', !!(activeId && id === activeId));
+  });
+}
+
+function doN4S4F4C2(index) {
+  if (isAnimating || currentFile !== 'N4S4F4.mol') return;
+  isAnimating = true;
+  setN4S4F4Buttons(true, `btnN4S4F4C2_${index}`);
+
+  const axisName = `$pgva_0_c2_${index}`;
+  const opStatus = document.getElementById('op-status');
+  opStatus.textContent = `正在执行 N₄S₄F₄ C₂${index} 旋转...`;
+  opStatus.classList.add('loading');
+
+  const btn = document.getElementById(`btnN4S4F4C2_${index}`);
+  const origText = btn.textContent;
+  btn.textContent = `C₂${index} 旋转中...`;
+
+  Jmol.script(myJmol, "save orientation userView;");
+  Jmol.script(myJmol, `
+    load ${currentFile}
+    center
+    zoom 120
+    spin off
+    calculate pointgroup
+    draw pointgroup
+    restore orientation userView
+  `);
+  setTimeout(() => {
+    Jmol.script(myJmol, `spin ${axisName} 180 300`);
+    setTimeout(() => {
+      isAnimating = false;
+      setN4S4F4Buttons(false, null);
+      btn.textContent = origText;
+      opStatus.classList.remove('loading');
+      opStatus.textContent = `N₄S₄F₄ C₂${index} 旋转完成`;
+      setTimeout(() => {
+        if (!isAnimating) opStatus.textContent = '可用操作: C₄, C₂';
+      }, 2000);
+    }, 1800);
+  }, 600);
 }
 
 window.onload = function() {
