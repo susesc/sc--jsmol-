@@ -2054,40 +2054,39 @@ function togglePointGroupAnnotation() {
 
   var btn = document.getElementById('btnTogglePG');
 
+  // 只保留显示功能，删除隐藏功能
   if (pgAnnotationVisible) {
-    // ── 隐藏：直接关闭标注，无需重载模型 ──
-    Jmol.script(myJmol, 'draw pointgroup off;');
-    pgAnnotationVisible = false;
-    _syncPGAnnotationButton();
-  } else {
-    // ── 显示：重载干净基础模型 → 计算点群 → 绘制标注 ──
-    _pgAnnotationComputing = true;
-    if (btn) {
-      btn.disabled = true;
-      btn.classList.add('pg-annot-computing');
-      btn.textContent = '计算中…';
-    }
-
-    // 1. 保存当前视角
-    Jmol.script(myJmol, 'save orientation _pgOri;');
-
-    // 2. 加载干净基础模型并恢复视角（500 ms 让 Jmol 完成渲染）
-    setTimeout(function() {
-      Jmol.script(myJmol, _pgBaseLoadScript('_pgOri'));
-
-      // 3. 计算点群并绘制标注（700 ms 后，模型已稳定）
-      setTimeout(function() {
-        Jmol.script(myJmol, 'calculate pointgroup; draw pointgroup;');
-
-        // 4. 等待绘制完成（400 ms）后更新按钮
-        setTimeout(function() {
-          pgAnnotationVisible = true;
-          _pgAnnotationComputing = false;
-          _syncPGAnnotationButton();
-        }, 400);
-      }, 700);
-    }, 500);
+    // 如果已经显示，直接返回，不做任何操作
+    return;
   }
+
+  // ── 显示：重载干净基础模型 → 计算点群 → 绘制标注 ──
+  _pgAnnotationComputing = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('pg-annot-computing');
+    btn.textContent = '计算中…';
+  }
+
+  // 1. 保存当前视角
+  Jmol.script(myJmol, 'save orientation _pgOri;');
+
+  // 2. 加载干净基础模型并恢复视角（500 ms 让 Jmol 完成渲染）
+  setTimeout(function() {
+    Jmol.script(myJmol, _pgBaseLoadScript('_pgOri'));
+
+    // 3. 计算点群并绘制标注（700 ms 后，模型已稳定）
+    setTimeout(function() {
+      Jmol.script(myJmol, 'calculate pointgroup; draw pointgroup;');
+
+      // 4. 等待绘制完成（400 ms）后更新按钮
+      setTimeout(function() {
+        pgAnnotationVisible = true;
+        _pgAnnotationComputing = false;
+        _syncPGAnnotationButton();
+      }, 400);
+    }, 700);
+  }, 500);
 }
 
 function doCnWithReset(n) {
