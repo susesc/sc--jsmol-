@@ -2054,39 +2054,40 @@ function togglePointGroupAnnotation() {
 
   var btn = document.getElementById('btnTogglePG');
 
-  // 只保留显示功能，删除隐藏功能
   if (pgAnnotationVisible) {
-    // 如果已经显示，直接返回，不做任何操作
-    return;
-  }
+    // ── 隐藏：直接关闭标注，无需重载模型 ──
+    Jmol.script(myJmol, 'draw pointgroup off;');
+    pgAnnotationVisible = false;
+    _syncPGAnnotationButton();
+  } else {
+    // ── 显示：重载干净基础模型 → 计算点群 → 绘制标注 ──
+    _pgAnnotationComputing = true;
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('pg-annot-computing');
+      btn.textContent = '计算中…';
+    }
 
-  // ── 显示：重载干净基础模型 → 计算点群 → 绘制标注 ──
-  _pgAnnotationComputing = true;
-  if (btn) {
-    btn.disabled = true;
-    btn.classList.add('pg-annot-computing');
-    btn.textContent = '计算中…';
-  }
+    // 1. 保存当前视角
+    Jmol.script(myJmol, 'save orientation _pgOri;');
 
-  // 1. 保存当前视角
-  Jmol.script(myJmol, 'save orientation _pgOri;');
-
-  // 2. 加载干净基础模型并恢复视角（500 ms 让 Jmol 完成渲染）
-  setTimeout(function() {
-    Jmol.script(myJmol, _pgBaseLoadScript('_pgOri'));
-
-    // 3. 计算点群并绘制标注（700 ms 后，模型已稳定）
+    // 2. 加载干净基础模型并恢复视角（500 ms 让 Jmol 完成渲染）
     setTimeout(function() {
-      Jmol.script(myJmol, 'calculate pointgroup; draw pointgroup;');
+      Jmol.script(myJmol, _pgBaseLoadScript('_pgOri'));
 
-      // 4. 等待绘制完成（400 ms）后更新按钮
+      // 3. 计算点群并绘制标注（700 ms 后，模型已稳定）
       setTimeout(function() {
-        pgAnnotationVisible = true;
-        _pgAnnotationComputing = false;
-        _syncPGAnnotationButton();
-      }, 400);
-    }, 700);
-  }, 500);
+        Jmol.script(myJmol, 'calculate pointgroup; draw pointgroup;');
+
+        // 4. 等待绘制完成（400 ms）后更新按钮
+        setTimeout(function() {
+          pgAnnotationVisible = true;
+          _pgAnnotationComputing = false;
+          _syncPGAnnotationButton();
+        }, 400);
+      }, 700);
+    }, 500);
+  }
 }
 
 function doCnWithReset(n) {
@@ -2130,59 +2131,80 @@ function doCnWithReset(n) {
   }, 500);
 }
 
+// ================================================================
+// 【修复后的 playSigmaVxz】使用蓝色 MESH 平面（仿苯分子风格）
+// ================================================================
 function playSigmaVxz() {
   if (currentFile !== 'water.xyz' || isAnimating) return;
   isAnimating = true;
 
-  // 【新增】删除旧平面，绘制 xz 平面（黄色，透明度 0.6）
-  Jmol.script(myJmol, "isosurface delete");
-  Jmol.script(myJmol, "isosurface plane1 plane {0 1 0} 0 translucent 0.6 color yellow");
+  // 删除之前可能存在的同名平面
+  Jmol.script(myJmol, "draw h2o_xz_plane off;");
+  // 绘制半透明蓝色 MESH 平面（xz 平面，即 y=0，范围覆盖分子）
+  // 四个顶点：(-1.5, 0, -1.2), (-1.5, 0, 1.5), (1.5, 0, 1.5), (1.5, 0, -1.2)
+  Jmol.script(myJmol, "draw h2o_xz_plane MESH {-1.5 0 -1.2} {-1.5 0 1.5} {1.5 0 1.5} {1.5 0 -1.2} color translucent 0.55 [30,120,220];");
 
   const btn = document.getElementById("btnSigmaV");
   btn.disabled = true;
   btn.classList.add("active");
   btn.textContent = "动画播放中...";
-  document.getElementById('op-status').textContent = "正在播放 σᵥ(xz) 反射动画（加速）...";
-  document.getElementById('op-status').classList.add('loading');
+  const opStatus = document.getElementById('op-status');
+  opStatus.textContent = "正在播放 σᵥ(xz) 反射动画...";
+  opStatus.classList.add('loading');
+
+  // 保存当前视角，重新加载纯净模型
   saveViewAndReset(h2oBaseModel);
-  let script = "set echo off; delay 0.2;";
+
+  // 动画脚本（正向互换 → 停留 → 反向复原）
   const steps = 10;
   const delayPerStep = 0.04;
   const y0 = 0.757;
   const dy = (-2 * y0) / steps;
-  for (let i = 0; i < steps; i++) {
-    script += `
-      select atomno=2; translateSelected {0 ${dy.toFixed(4)} 0};
-      select atomno=3; translateSelected {0 ${(-dy).toFixed(4)} 0};
-      delay ${delayPerStep};
-    `;
-  }
-  script += `
-    delay 0.3;
-    calculate pointgroup;
-    draw pointgroup;
-    spin off;
-    background echo "σᵥ(xz) 反射动画完成";
-    delay 0.6;
-    background echo OFF;
-  `;
-  Jmol.script(myJmol, script);
-  setTimeout(() => {
-    isAnimating = false;
-    btn.disabled = false;
-    btn.classList.remove("active");
-    btn.textContent = "播放 σᵥ(xz) 连续反射";
-    document.getElementById('op-status').classList.remove('loading');
-    document.getElementById('op-status').textContent = "σᵥ(xz) 动画完成，C₂ 操作已恢复";
-    setTimeout(() => {
-      document.getElementById('op-status').textContent = "可用操作: C₂";
-    }, 1500);
-  }, (steps * delayPerStep + 1.1) * 1000);
 
-  // 【新增】2 秒后删除平面
-  setTimeout(function() {
-    Jmol.script(myJmol, "isosurface delete");
-  }, 2000);
+  // 延迟 500ms 确保模型加载完成
+  setTimeout(() => {
+    let script = "set echo off; delay 0.1;";
+    // 正向：两个氢原子沿 y 轴互换位置
+    for (let i = 0; i < steps; i++) {
+      script += `
+        select atomno=2; translateSelected {0 ${dy.toFixed(4)} 0};
+        select atomno=3; translateSelected {0 ${(-dy).toFixed(4)} 0};
+        delay ${delayPerStep};
+      `;
+    }
+    script += `delay 0.3;`; // 停留，让用户看到反射后的状态
+    // 反向：恢复原始位置
+    for (let i = 0; i < steps; i++) {
+      script += `
+        select atomno=2; translateSelected {0 ${(-dy).toFixed(4)} 0};
+        select atomno=3; translateSelected {0 ${dy.toFixed(4)} 0};
+        delay ${delayPerStep};
+      `;
+    }
+    script += `
+      delay 0.2;
+      background echo "σᵥ(xz) 反射动画完成";
+      delay 0.5;
+      background echo OFF;
+    `;
+    Jmol.script(myJmol, script);
+
+    // 动画总时长后恢复按钮状态，并删除蓝色平面
+    const totalDuration = (steps * delayPerStep * 2 + 1.2) * 1000;
+    setTimeout(() => {
+      isAnimating = false;
+      btn.disabled = false;
+      btn.classList.remove("active");
+      btn.textContent = "播放 σᵥ(xz) 连续反射";
+      opStatus.classList.remove('loading');
+      opStatus.textContent = "σᵥ(xz) 动画完成，可用 C₂ 操作";
+      // 删除平面
+      Jmol.script(myJmol, "draw h2o_xz_plane off;");
+      setTimeout(() => {
+        if (!isAnimating) opStatus.textContent = "可用操作: C₂";
+      }, 1500);
+    }, totalDuration);
+  }, 500);
 }
 
 function playSigmaPrimeVyz() {
@@ -2375,41 +2397,35 @@ var co2C2primeClickCount = 0;   // 0-based, mod 3 to get click index
 // 用 Rodrigues 公式：旋转轴 n=(0,ny,nz)，v=(-1.197,0,0) or (1.197,0,0)
 // v'(α) = v cosα + (n×v) sinα   (因 n·v=0)
 // n×(-1.197,0,0) = (0, -nz*(-1.197)*(-1), +(-1.197)*nz... let me use exact formula below)
-// For O1 at (-r,0,0): arc x=-r cosα, y=nz*(-r)*(-1)*sinα... 
-// verified numerically above; using precomputed deltas directly.
+// For O1 at (-r,0,0): arc x=-r cosα, y=nz*r sinα (wait - let me redo sign carefully)
+// n×v where v=(-r,0,0), n=(0,ny,nz):
+//   n×v = (ny*0 - nz*0,  nz*(-r) - 0*0,  0*0 - ny*(-r))
+//       = (0, -nz*r, ny*r)
+// So arc for O1: (x,y,z) = (-r cosα, -nz*r sinα, ny*r sinα)
+const rCo = 1.197;
+const stepsCo = 24;
+const axesArr = [
+  {ny:1, nz:0, label:"y"},
+  {ny:0, nz:1, label:"z"},
+  {ny:1/Math.sqrt(2), nz:1/Math.sqrt(2), label:"yz45°"}
+];
 
-(function buildCo2C2primeDeltas() {
-  // Parametric arc: O1 starts at (-r,0,0)
-  // axis (0,ny,nz): x'=-r cosα, y'= nz*r sinα (wait - let me redo sign carefully)
-  // n×v where v=(-r,0,0), n=(0,ny,nz):
-  //   n×v = (ny*0 - nz*0,  nz*(-r) - 0*0,  0*0 - ny*(-r))
-  //       = (0, -nz*r, ny*r)
-  // So arc for O1: (x,y,z) = (-r cosα, -nz*r sinα, ny*r sinα)
-  const r = 1.197;
-  const steps = 24;
-  const axes = [
-    {ny:1, nz:0, label:"y"},
-    {ny:0, nz:1, label:"z"},
-    {ny:1/Math.sqrt(2), nz:1/Math.sqrt(2), label:"yz45°"}
-  ];
-
-  window.co2C2primeData = axes.map(({ny, nz, label}) => {
-    const deltasO1 = [], deltasO2 = [];
-    for (let k = 0; k < steps; k++) {
-      const a0 = Math.PI * k / steps;
-      const a1 = Math.PI * (k+1) / steps;
-      // O1 position at step
-      const x0 = -r * Math.cos(a0), y0 = -nz*r*Math.sin(a0), z0 =  ny*r*Math.sin(a0);
-      const x1 = -r * Math.cos(a1), y1 = -nz*r*Math.sin(a1), z1 =  ny*r*Math.sin(a1);
-      deltasO1.push([x1-x0, y1-y0, z1-z0]);
-      // O2 is exactly opposite: (r cosα, nz*r sinα, -ny*r sinα)
-      const x0b =  r * Math.cos(a0), y0b =  nz*r*Math.sin(a0), z0b = -ny*r*Math.sin(a0);
-      const x1b =  r * Math.cos(a1), y1b =  nz*r*Math.sin(a1), z1b = -ny*r*Math.sin(a1);
-      deltasO2.push([x1b-x0b, y1b-y0b, z1b-z0b]);
-    }
-    return {label, deltasO1, deltasO2};
-  });
-})();
+window.co2C2primeData = axesArr.map(({ny, nz, label}) => {
+  const deltasO1 = [], deltasO2 = [];
+  for (let k = 0; k < stepsCo; k++) {
+    const a0 = Math.PI * k / stepsCo;
+    const a1 = Math.PI * (k+1) / stepsCo;
+    // O1 position at step
+    const x0 = -rCo * Math.cos(a0), y0 = -nz*rCo*Math.sin(a0), z0 =  ny*rCo*Math.sin(a0);
+    const x1 = -rCo * Math.cos(a1), y1 = -nz*rCo*Math.sin(a1), z1 =  ny*rCo*Math.sin(a1);
+    deltasO1.push([x1-x0, y1-y0, z1-z0]);
+    // O2 is exactly opposite: (r cosα, nz*r sinα, -ny*r sinα)
+    const x0b =  rCo * Math.cos(a0), y0b =  nz*rCo*Math.sin(a0), z0b = -ny*rCo*Math.sin(a0);
+    const x1b =  rCo * Math.cos(a1), y1b =  nz*rCo*Math.sin(a1), z1b = -ny*rCo*Math.sin(a1);
+    deltasO2.push([x1b-x0b, y1b-y0b, z1b-z0b]);
+  }
+  return {label, deltasO1, deltasO2};
+});
 
 function playCo2C2prime() {
   if (currentFile !== 'CO2.mol' || isAnimating) return;
@@ -2443,12 +2459,12 @@ function playCo2C2prime() {
   Jmol.script(myJmol, co2BaseModel + 'restore orientation co2View;');
 
   const {deltasO1, deltasO2} = window.co2C2primeData[clickIdx];
-  const steps = 24;
+  const stepsLocal = stepsCo;
   const delayPerStep = 0.025;
 
   setTimeout(() => {
     let script = 'set echo off; delay 0.15;';
-    for (let k = 0; k < steps; k++) {
+    for (let k = 0; k < stepsLocal; k++) {
       const [dx1, dy1, dz1] = deltasO1[k];
       const [dx2, dy2, dz2] = deltasO2[k];
       script += `select atomno=1; translateSelected {${dx1.toFixed(5)} ${dy1.toFixed(5)} ${dz1.toFixed(5)}};`;
@@ -2466,7 +2482,7 @@ function playCo2C2prime() {
     script += `delay 1.0; background echo OFF;`;
     Jmol.script(myJmol, script);
 
-    const totalTime = (steps * delayPerStep + 1.5) * 1000;
+    const totalTime = (stepsLocal * delayPerStep + 1.5) * 1000;
     setTimeout(() => {
       isAnimating = false;
       // 更新按钮文字，提示下一次将演示哪个轴
