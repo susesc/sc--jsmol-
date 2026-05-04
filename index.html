@@ -2007,12 +2007,8 @@ function _syncPGAnnotationButton() {
   if (!btn) return;
   btn.disabled = false;
   btn.classList.remove('pg-annot-on', 'pg-annot-computing');
-  if (pgAnnotationVisible) {
-    btn.textContent = '隐藏点群标注';
-    btn.classList.add('pg-annot-on');
-  } else {
-    btn.textContent = '显示点群标注';
-  }
+  // 始终显示“显示点群标注”，不再切换文字
+  btn.textContent = '显示点群标注';
 }
 
 /**
