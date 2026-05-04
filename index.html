@@ -2795,14 +2795,16 @@ function playEthyleneSigmaYz() {
   opStatus.textContent = "正在播放乙烯 σ(yz) 镜面反射动画...";
   opStatus.classList.add('loading');
 
+  // 保存视角，加载干净模型
   Jmol.script(myJmol, "save orientation ethView;");
   Jmol.script(myJmol, ethyleneBaseModel + "restore orientation ethView;");
 
+  // 等待模型稳定后绘制平面
   setTimeout(() => {
     Jmol.script(myJmol, "isosurface delete;");
     Jmol.script(myJmol, "draw delete;");
 
-    // ── 绘制 σ(yz) 平面（x=0） ──
+    // 绘制 σ(yz) 平面（x = 0）
     Jmol.script(myJmol,
       "draw ethSigmaYZFill POLYGON 4 " +
       "{0.0 -3.0 -3.0} {0.0 3.0 -3.0} {0.0 3.0 3.0} {0.0 -3.0 3.0} " +
@@ -2814,27 +2816,13 @@ function playEthyleneSigmaYz() {
       "color [30,80,200];"
     );
 
-    // ── 绘制简化的坐标系（原点在分子中心） ──
-    // X 轴（红色）—— yz 平面的法线，加粗
-    Jmol.script(myJmol, "draw axisX arrow {0 0 0} {2.0 0 0} width 0.08 color red;");
-    // Y 轴（绿色）
-    Jmol.script(myJmol, "draw axisY arrow {0 0 0} {0 2.0 0} width 0.05 color green;");
-    // Z 轴（蓝色）
-    Jmol.script(myJmol, "draw axisZ arrow {0 0 0} {0 0 2.0} width 0.05 color blue;");
-
-    // ── 标签 ──
-    Jmol.script(myJmol,
-      "set echo axisLab 20% 80%; " +
-      "echo X (红) | Y (绿) | Z (蓝)  [σ(yz) 平面，法线沿 X]"
-    );
-
-    // ── 执行原子互换动画 ──
+    // 执行原子互换动画（原逻辑）
     const steps = 20;
     const delay = 0.02;
     const xC = 0.6672;
-    const dxC = (-2 * xC) / steps;
+    const dxC = (-2 * xC) / steps;  // C1 向左，C2 向右
     const xH = 1.2213;
-    const dxH = (-2 * xH) / steps;
+    const dxH = (-2 * xH) / steps;  // H 原子同样互换
 
     let script = "set echo off; delay 0.2;";
     for (let i = 0; i < steps; i++) {
@@ -2846,6 +2834,7 @@ function playEthyleneSigmaYz() {
         delay ${delay};
       `;
     }
+
     script += `
       delay 0.3;
       background echo "乙烯 σ(yz) 反射完成";
@@ -2853,26 +2842,28 @@ function playEthyleneSigmaYz() {
       background echo OFF;
       restore orientation ethView;
     `;
+
     Jmol.script(myJmol, script);
 
+    // 动画完成后的清理
     const totalTime = (steps * delay + 1.5) * 1000;
     setTimeout(() => {
       isAnimating = false;
       opStatus.classList.remove('loading');
       opStatus.textContent = "乙烯 σ(yz) 镜面反射完成";
 
-      // 清除平面、坐标轴和标签
+      // 2 秒后删除平面
       setTimeout(() => {
-        Jmol.script(myJmol, "draw ethSigmaYZFill delete; draw ethSigmaYZMesh delete;");
-        Jmol.script(myJmol, "draw axisX delete; draw axisY delete; draw axisZ delete;");
-        Jmol.script(myJmol, "set echo axisLab off;");
+        Jmol.script(myJmol, "draw ethSigmaYZFill delete;");
+        Jmol.script(myJmol, "draw ethSigmaYZMesh delete;");
         if (!isAnimating) {
           opStatus.textContent = "可用操作: C₂";
         }
-      }, 2500);
+      }, 2000);
     }, totalTime);
   }, 400);
-}}/* ================================================================
+}
+/* ================================================================
    乙烯 σ(xy) 镜面反射 —— 恒等操作提示
    乙烯为平面分子（分子平面 = xy 平面），σ(xy) 将所有原子映射回自身。
    ================================================================ */
