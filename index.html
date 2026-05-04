@@ -2130,59 +2130,101 @@ function doCnWithReset(n) {
   }, 500);
 }
 
+// ================================================================
+// 水分子 σᵥ(xz) 镜面反射动画
+// xz 平面垂直于分子平面，O 原子在平面上，两 H 原子关于该平面对称互换。
+// 蓝色半透明平面展示 σᵥ(xz) 对称面，参照苯 σd 动画风格。
+// ================================================================
 function playSigmaVxz() {
   if (currentFile !== 'water.xyz' || isAnimating) return;
   isAnimating = true;
 
-  // 【新增】删除旧平面，绘制 xz 平面（黄色，透明度 0.6）
-  Jmol.script(myJmol, "isosurface delete");
-  Jmol.script(myJmol, "isosurface plane1 plane {0 1 0} 0 translucent 0.6 color yellow");
+  // 【修改】删除旧平面/等值面，绘制 xz 对称平面（蓝色，透明度 0.5）
+  // 平面法向量为 y 轴方向 {0 1 0}，过原点，即 xz 平面
+  Jmol.script(myJmol, "isosurface delete;");
+  Jmol.script(myJmol, "draw delete;");
+  // 使用 draw 绘制蓝色半透明对称平面，尺寸覆盖分子范围
+  // 参照苯 σd 的 draw plane 方式：四个顶点定义平面矩形
+  Jmol.script(myJmol,
+    "draw sigmaPlane POLYGON 4 " +
+    "{-2.5 0 -2.5} {2.5 0 -2.5} {2.5 0 2.5} {-2.5 0 2.5} " +
+    "translucent 0.5 color [51,133,255];"
+  );
 
   const btn = document.getElementById("btnSigmaV");
   btn.disabled = true;
   btn.classList.add("active");
   btn.textContent = "动画播放中...";
-  document.getElementById('op-status').textContent = "正在播放 σᵥ(xz) 反射动画（加速）...";
-  document.getElementById('op-status').classList.add('loading');
-  saveViewAndReset(h2oBaseModel);
-  let script = "set echo off; delay 0.2;";
-  const steps = 10;
-  const delayPerStep = 0.04;
-  const y0 = 0.757;
-  const dy = (-2 * y0) / steps;
-  for (let i = 0; i < steps; i++) {
+  document.getElementById('op-status').textContent = "正在播放 σᵥ(xz) 反射动画 — 两 H 原子沿蓝色对称面互换...";
+
+  // 保存当前视角
+  Jmol.script(myJmol, "save orientation sigmaView;");
+
+  // 水分子原子编号（典型 water.xyz）：
+  //   1 = O（位于 xz 平面上，y=0，不动）
+  //   2 = H1（y > 0 一侧）
+  //   3 = H2（y < 0 一侧）
+  // σᵥ(xz) 反射：y → −y，即 H1 与 H2 互换位置
+
+  // 获取两个 H 原子的坐标（使用预定义或从模型读取）
+  // 水分子 C2v：O 在原点，两 H 关于 xz 平面对称
+  var steps = 20;
+  var delay = 0.06; // 每步延迟（秒），加速版
+
+  // 读取原子坐标
+  var h1y = parseFloat(Jmol.evaluateVar(myJmol, "{atomno=2}.y"));
+  var h1x = parseFloat(Jmol.evaluateVar(myJmol, "{atomno=2}.x"));
+  var h1z = parseFloat(Jmol.evaluateVar(myJmol, "{atomno=2}.z"));
+  var h2y = parseFloat(Jmol.evaluateVar(myJmol, "{atomno=3}.y"));
+  var h2x = parseFloat(Jmol.evaluateVar(myJmol, "{atomno=3}.x"));
+  var h2z = parseFloat(Jmol.evaluateVar(myJmol, "{atomno=3}.z"));
+
+  // H1 → H2 位置，H2 → H1 位置（互换）
+  var dx1 = (h2x - h1x) / steps;
+  var dy1 = (h2y - h1y) / steps;
+  var dz1 = (h2z - h1z) / steps;
+  var dx2 = (h1x - h2x) / steps;
+  var dy2 = (h1y - h2y) / steps;
+  var dz2 = (h1z - h2z) / steps;
+
+  // 构建逐步平移动画脚本
+  var script = "set echo off;";
+  for (var i = 0; i < steps; i++) {
     script += `
-      select atomno=2; translateSelected {0 ${dy.toFixed(4)} 0};
-      select atomno=3; translateSelected {0 ${(-dy).toFixed(4)} 0};
-      delay ${delayPerStep};
+      select atomno=2;
+      translateSelected {${dx1.toFixed(4)} ${dy1.toFixed(4)} ${dz1.toFixed(4)}};
+      select atomno=3;
+      translateSelected {${dx2.toFixed(4)} ${dy2.toFixed(4)} ${dz2.toFixed(4)}};
+      delay ${delay};
     `;
   }
+
+  // 动画结束后：保留蓝色平面短暂展示，然后清理
   script += `
+    delay 0.5;
+    restore orientation sigmaView;
     delay 0.3;
-    calculate pointgroup;
-    draw pointgroup;
-    spin off;
-    background echo "σᵥ(xz) 反射动画完成";
-    delay 0.6;
-    background echo OFF;
   `;
+
   Jmol.script(myJmol, script);
+
+  // 动画完成回调
+  var totalTime = (steps * delay + 1.5) * 1000;
   setTimeout(() => {
     isAnimating = false;
     btn.disabled = false;
     btn.classList.remove("active");
-    btn.textContent = "播放 σᵥ(xz) 连续反射";
-    document.getElementById('op-status').classList.remove('loading');
-    document.getElementById('op-status').textContent = "σᵥ(xz) 动画完成，C₂ 操作已恢复";
-    setTimeout(() => {
-      document.getElementById('op-status').textContent = "可用操作: C₂";
-    }, 1500);
-  }, (steps * delayPerStep + 1.1) * 1000);
+    btn.textContent = "σᵥ(xz) 反射";
+    document.getElementById('op-status').textContent = "σᵥ(xz) 反射完成 — 两 H 原子已沿蓝色对称面互换";
 
-  // 【新增】2 秒后删除平面
-  setTimeout(function() {
-    Jmol.script(myJmol, "isosurface delete");
-  }, 2000);
+    // 延迟清除蓝色平面（保留 2 秒供观察）
+    setTimeout(() => {
+      Jmol.script(myJmol, "draw sigmaPlane delete;");
+      if (!isAnimating) {
+        document.getElementById('op-status').textContent = "可用操作: C₂, σᵥ(xz), σᵥ'(yz)";
+      }
+    }, 2000);
+  }, totalTime);
 }
 
 function playSigmaPrimeVyz() {
