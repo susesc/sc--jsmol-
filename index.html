@@ -2341,6 +2341,7 @@ function swapClKeepView(idA, idB, atomA, atomB) {
 }
 
 // ── 通用 CHCl₃ σᵥ 反射动画（带对称平面） ──
+// ── 通用 CHCl₃ σᵥ 反射动画（带对称平面 + 坐标轴）──
 function playCHCl3SigmaV(swaps, stationaryAtom, btnId, label) {
   if (currentFile !== 'CHCl3.mol' || isAnimating) return;
   isAnimating = true;
@@ -2356,7 +2357,7 @@ function playCHCl3SigmaV(swaps, stationaryAtom, btnId, label) {
   Jmol.script(myJmol, "save orientation chcl3View;");
   Jmol.script(myJmol, chcl3BaseModel + "restore orientation chcl3View;");
 
-  // 等待模型加载完毕后绘制平面并执行原子互换
+  // 等待模型加载完毕后绘制平面、坐标轴并执行原子互换
   setTimeout(() => {
     // 清除旧绘制
     Jmol.script(myJmol, "isosurface delete;");
@@ -2392,6 +2393,22 @@ function playCHCl3SigmaV(swaps, stationaryAtom, btnId, label) {
       `{${v3[0].toFixed(3)} ${v3[1].toFixed(3)} ${v3[2].toFixed(3)}} ` +
       `{${v4[0].toFixed(3)} ${v4[1].toFixed(3)} ${v4[2].toFixed(3)}} ` +
       "color [30,80,200];"
+    );
+
+    // ── 绘制标准坐标轴（空间参考，所有轴不加粗）──
+    Jmol.script(myJmol, "draw axisX arrow {0 0 0} {2.0 0 0} width 0.05 color red;");
+    Jmol.script(myJmol, "draw axisY arrow {0 0 0} {0 2.0 0} width 0.05 color green;");
+    Jmol.script(myJmol, "draw axisZ arrow {0 0 0} {0 0 2.0} width 0.05 color blue;");
+
+    // 轴末端大号字母标签
+    Jmol.script(myJmol, "draw labelX LABEL {2.2 0 0} \"X\" color red font 28;");
+    Jmol.script(myJmol, "draw labelY LABEL {0 2.2 0} \"Y\" color green font 28;");
+    Jmol.script(myJmol, "draw labelZ LABEL {0 0 2.2} \"Z\" color blue font 28;");
+
+    // 可选屏幕说明
+    Jmol.script(myJmol,
+      "set echo axisLab 20% 80%; " +
+      "echo X (红) | Y (绿) | Z (蓝)"
     );
 
     // ── 执行原子互换动画 ──
@@ -2434,10 +2451,13 @@ function playCHCl3SigmaV(swaps, stationaryAtom, btnId, label) {
       document.getElementById('op-status').classList.remove('loading');
       document.getElementById('op-status').textContent = "CHCl₃ " + label + " 反射完成";
 
-      // 延迟删除平面（保留2秒）
+      // 延迟删除平面、坐标轴和标签（保留2秒）
       setTimeout(() => {
         Jmol.script(myJmol, "draw sigmaPlaneFill delete;");
         Jmol.script(myJmol, "draw sigmaPlaneMesh delete;");
+        Jmol.script(myJmol, "draw axisX delete; draw axisY delete; draw axisZ delete;");
+        Jmol.script(myJmol, "draw labelX delete; draw labelY delete; draw labelZ delete;");
+        Jmol.script(myJmol, "set echo axisLab off;");
         if (!isAnimating) {
           document.getElementById('op-status').textContent = "可用操作: C₃";
         }
@@ -2445,7 +2465,6 @@ function playCHCl3SigmaV(swaps, stationaryAtom, btnId, label) {
     }, totalTime);
   }, 400);
 }
-
 // ── 三个具体的 σᵥ 操作 ──
 function playCHCl3SigmaV12() {
   playCHCl3SigmaV(
