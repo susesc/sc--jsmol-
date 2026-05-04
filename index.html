@@ -2335,64 +2335,147 @@ function swapClKeepView(idA, idB, atomA, atomB) {
   Jmol.script(myJmol, script);
 }
 
-function playCHCl3SigmaV12() {
+// ── 通用 CHCl₃ σᵥ 反射动画（带对称平面） ──
+function playCHCl3SigmaV(swaps, stationaryAtom, btnId, label) {
   if (currentFile !== 'CHCl3.mol' || isAnimating) return;
   isAnimating = true;
-  const btn = document.getElementById("btnSigmaV12");
-  btn.disabled = true; btn.classList.add("active"); btn.textContent = "动画播放中...";
-  document.getElementById('op-status').textContent = "正在播放 CHCl₃ σᵥ₁ 反射动画...";
+
+  const btn = document.getElementById(btnId);
+  btn.disabled = true;
+  btn.classList.add("active");
+  btn.textContent = label + " 动画中...";
+  document.getElementById('op-status').textContent = "正在播放 CHCl₃ " + label + " 反射动画...";
   document.getElementById('op-status').classList.add('loading');
-  swapClKeepView(1, 2,
-    {x:-0.0962, y:-1.6789, z:0.1394},
-    {x:-1.4059, y:0.9228, z:0.1394}
-  );
+
+  // 保存视角，重载干净模型
+  Jmol.script(myJmol, "save orientation chcl3View;");
+  Jmol.script(myJmol, chcl3BaseModel + "restore orientation chcl3View;");
+
+  // 等待模型加载完毕后绘制平面并执行原子互换
   setTimeout(() => {
-    isAnimating = false;
-    btn.disabled = false; btn.classList.remove("active"); btn.textContent = "σᵥ₁（Cl1 ↔ Cl2）";
-    document.getElementById('op-status').classList.remove('loading');
-    document.getElementById('op-status').textContent = "CHCl₃ σᵥ₁ 反射完成";
-    setTimeout(() => { document.getElementById('op-status').textContent = "可用操作: C₃"; }, 1500);
-  }, 1500);
+    // 清除旧绘制
+    Jmol.script(myJmol, "isosurface delete;");
+    Jmol.script(myJmol, "draw delete;");
+
+    // ── 构建平面顶点 ──
+    const sx = stationaryAtom.x, sy = stationaryAtom.y, sz = stationaryAtom.z;
+    const len = Math.sqrt(sx*sx + sy*sy + sz*sz);
+    const ux = sx / len, uy = sy / len, uz = sz / len;   // 从原点指向不动 Cl 的方向
+    const w = 2.5, h = 2.5;   // 平面半宽/半高
+
+    // 四个顶点（平面过原点，包含 u 和 z 轴）
+    const v1 = [ ux*w,        uy*w,        uz*w + h];
+    const v2 = [-ux*w,       -uy*w,       -uz*w + h];
+    const v3 = [-ux*w,       -uy*w,       -uz*w - h];
+    const v4 = [ ux*w,        uy*w,        uz*w - h];
+
+    // 绘制半透明蓝色平面（使用 POLYGON）
+    Jmol.script(myJmol,
+      "draw sigmaPlaneFill POLYGON 4 " +
+      `{${v1[0].toFixed(3)} ${v1[1].toFixed(3)} ${v1[2].toFixed(3)}} ` +
+      `{${v2[0].toFixed(3)} ${v2[1].toFixed(3)} ${v2[2].toFixed(3)}} ` +
+      `{${v3[0].toFixed(3)} ${v3[1].toFixed(3)} ${v3[2].toFixed(3)}} ` +
+      `{${v4[0].toFixed(3)} ${v4[1].toFixed(3)} ${v4[2].toFixed(3)}} ` +
+      "color [51,133,255] translucent 0.4;"
+    );
+
+    // 添加网格边框
+    Jmol.script(myJmol,
+      "draw sigmaPlaneMesh MESH 4 " +
+      `{${v1[0].toFixed(3)} ${v1[1].toFixed(3)} ${v1[2].toFixed(3)}} ` +
+      `{${v2[0].toFixed(3)} ${v2[1].toFixed(3)} ${v2[2].toFixed(3)}} ` +
+      `{${v3[0].toFixed(3)} ${v3[1].toFixed(3)} ${v3[2].toFixed(3)}} ` +
+      `{${v4[0].toFixed(3)} ${v4[1].toFixed(3)} ${v4[2].toFixed(3)}} ` +
+      "color [30,80,200];"
+    );
+
+    // ── 执行原子互换动画 ──
+    const steps = 20;
+    const delayPerStep = 0.025;
+    let script = "set echo off; delay 0.1;";
+
+    swaps.forEach(({idA, idB, atomA, atomB}) => {
+      const dxA = (atomB.x - atomA.x) / steps;
+      const dyA = (atomB.y - atomA.y) / steps;
+      const dzA = (atomB.z - atomA.z) / steps;
+      const dxB = (atomA.x - atomB.x) / steps;
+      const dyB = (atomA.y - atomB.y) / steps;
+      const dzB = (atomA.z - atomB.z) / steps;
+
+      for (let i = 0; i < steps; i++) {
+        script +=
+          `select atomno=${idA}; translateSelected {${dxA.toFixed(5)} ${dyA.toFixed(5)} ${dzA.toFixed(5)}};` +
+          `select atomno=${idB}; translateSelected {${dxB.toFixed(5)} ${dyB.toFixed(5)} ${dzB.toFixed(5)}};` +
+          `delay ${delayPerStep};`;
+      }
+    });
+
+    script += `
+      delay 0.3;
+      background echo "CHCl₃ ${label} 反射完成";
+      delay 0.6;
+      background echo OFF;
+    `;
+
+    Jmol.script(myJmol, script);
+
+    // 动画结束后清理
+    const totalTime = (steps * delayPerStep + 1.5) * 1000;
+    setTimeout(() => {
+      isAnimating = false;
+      btn.disabled = false;
+      btn.classList.remove("active");
+      btn.textContent = label;
+      document.getElementById('op-status').classList.remove('loading');
+      document.getElementById('op-status').textContent = "CHCl₃ " + label + " 反射完成";
+
+      // 延迟删除平面（保留2秒）
+      setTimeout(() => {
+        Jmol.script(myJmol, "draw sigmaPlaneFill delete;");
+        Jmol.script(myJmol, "draw sigmaPlaneMesh delete;");
+        if (!isAnimating) {
+          document.getElementById('op-status').textContent = "可用操作: C₃";
+        }
+      }, 2000);
+    }, totalTime);
+  }, 400);
+}
+
+// ── 三个具体的 σᵥ 操作 ──
+function playCHCl3SigmaV12() {
+  playCHCl3SigmaV(
+    [{ idA: 1, idB: 2,
+       atomA: {x:-0.0962, y:-1.6789, z:0.1394},
+       atomB: {x:-1.4059, y:0.9228,  z:0.1394}
+    }],
+    {x:1.5022, y:0.7561, z:0.1393},   // 不动 Cl3
+    "btnSigmaV12",
+    "σᵥ₁（Cl1 ↔ Cl2）"
+  );
 }
 
 function playCHCl3SigmaV23() {
-  if (currentFile !== 'CHCl3.mol' || isAnimating) return;
-  isAnimating = true;
-  const btn = document.getElementById("btnSigmaV23");
-  btn.disabled = true; btn.classList.add("active"); btn.textContent = "动画播放中...";
-  document.getElementById('op-status').textContent = "正在播放 CHCl₃ σᵥ₂ 反射动画...";
-  document.getElementById('op-status').classList.add('loading');
-  swapClKeepView(2, 3,
-    {x:-1.4059, y:0.9228, z:0.1394},
-    {x:1.5022, y:0.7561, z:0.1393}
+  playCHCl3SigmaV(
+    [{ idA: 2, idB: 3,
+       atomA: {x:-1.4059, y:0.9228,  z:0.1394},
+       atomB: {x:1.5022,  y:0.7561,  z:0.1393}
+    }],
+    {x:-0.0962, y:-1.6789, z:0.1394}, // 不动 Cl1
+    "btnSigmaV23",
+    "σᵥ₂（Cl2 ↔ Cl3）"
   );
-  setTimeout(() => {
-    isAnimating = false;
-    btn.disabled = false; btn.classList.remove("active"); btn.textContent = "σᵥ₂（Cl2 ↔ Cl3）";
-    document.getElementById('op-status').classList.remove('loading');
-    document.getElementById('op-status').textContent = "CHCl₃ σᵥ₂ 反射完成";
-    setTimeout(() => { document.getElementById('op-status').textContent = "可用操作: C₃"; }, 1500);
-  }, 1500);
 }
 
 function playCHCl3SigmaV31() {
-  if (currentFile !== 'CHCl3.mol' || isAnimating) return;
-  isAnimating = true;
-  const btn = document.getElementById("btnSigmaV31");
-  btn.disabled = true; btn.classList.add("active"); btn.textContent = "动画播放中...";
-  document.getElementById('op-status').textContent = "正在播放 CHCl₃ σᵥ₃ 反射动画...";
-  document.getElementById('op-status').classList.add('loading');
-  swapClKeepView(3, 1,
-    {x:1.5022, y:0.7561, z:0.1393},
-    {x:-0.0962, y:-1.6789, z:0.1394}
+  playCHCl3SigmaV(
+    [{ idA: 3, idB: 1,
+       atomA: {x:1.5022,  y:0.7561,  z:0.1393},
+       atomB: {x:-0.0962, y:-1.6789, z:0.1394}
+    }],
+    {x:-1.4059, y:0.9228, z:0.1394},  // 不动 Cl2
+    "btnSigmaV31",
+    "σᵥ₃（Cl3 ↔ Cl1）"
   );
-  setTimeout(() => {
-    isAnimating = false;
-    btn.disabled = false; btn.classList.remove("active"); btn.textContent = "σᵥ₃（Cl3 ↔ Cl1）";
-    document.getElementById('op-status').classList.remove('loading');
-    document.getElementById('op-status').textContent = "CHCl₃ σᵥ₃ 反射完成";
-    setTimeout(() => { document.getElementById('op-status').textContent = "可用操作: C₃"; }, 1500);
-  }, 1500);
 }
 
 // ================================================================
