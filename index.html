@@ -2718,83 +2718,151 @@ function playEthyleneInversion() {
 function playEthyleneSigmaXz() {
   if (currentFile !== 'H2C=CH2.mol' || isAnimating) return;
   isAnimating = true;
+
   const opStatus = document.getElementById('op-status');
   opStatus.textContent = "正在播放乙烯 σ(xz) 镜面反射动画...";
   opStatus.classList.add('loading');
-  Jmol.script(myJmol, "save orientation userView;");
-  Jmol.script(myJmol, ethyleneBaseModel + "restore orientation userView;");
-  const steps = 20;
-  const delay = 0.02;
-  const dy_up = (-2 * 0.9290 / steps).toFixed(4);
-  const dy_dn = ( 2 * 0.9290 / steps).toFixed(4);
-  let script = "set echo off; delay 0.2;";
-  for (let i = 0; i < steps; i++) {
-    script += `
-      select atomno=4 or atomno=5; translateSelected {0 ${dy_up} 0};
-      select atomno=3 or atomno=6; translateSelected {0 ${dy_dn} 0};
-      delay ${delay};
-    `;
-  }
-  script += `
-    delay 0.3;
-    calculate pointgroup;
-    draw pointgroup;
-    spin off;
-    background echo "乙烯 σ(xz) 镜面反射动画完成";
-    delay 0.6;
-    background echo OFF;
-  `;
-  Jmol.script(myJmol, script);
-  setTimeout(() => {
-    isAnimating = false;
-    opStatus.classList.remove('loading');
-    opStatus.textContent = "乙烯 σ(xz) 镜面反射完成";
-    setTimeout(() => { opStatus.textContent = "可用操作: C₂"; }, 1500);
-  }, (steps * delay + 1.2) * 1000);
-}
 
+  // 保存视角，加载干净模型
+  Jmol.script(myJmol, "save orientation ethView;");
+  Jmol.script(myJmol, ethyleneBaseModel + "restore orientation ethView;");
+
+  // 等待模型稳定后绘制平面
+  setTimeout(() => {
+    Jmol.script(myJmol, "isosurface delete;");
+    Jmol.script(myJmol, "draw delete;");
+
+    // 绘制 σ(xz) 平面（y = 0）
+    Jmol.script(myJmol,
+      "draw ethSigmaXZFill POLYGON 4 " +
+      "{-3.0 0.0 -3.0} {3.0 0.0 -3.0} {3.0 0.0 3.0} {-3.0 0.0 3.0} " +
+      "color [51,133,255] translucent 0.35;"
+    );
+    Jmol.script(myJmol,
+      "draw ethSigmaXZMesh MESH 4 " +
+      "{-3.0 0.0 -3.0} {3.0 0.0 -3.0} {3.0 0.0 3.0} {-3.0 0.0 3.0} " +
+      "color [30,80,200];"
+    );
+
+    // 执行原子互换动画（原逻辑）
+    const steps = 20;
+    const delay = 0.02;
+    const dy_up = (-2 * 0.9290 / steps).toFixed(4);  // H4,H5 向 y 负方向
+    const dy_dn = ( 2 * 0.9290 / steps).toFixed(4);  // H3,H6 向 y 正方向
+
+    let script = "set echo off; delay 0.2;";
+    for (let i = 0; i < steps; i++) {
+      script += `
+        select atomno=4 or atomno=5; translateSelected {0 ${dy_up} 0};
+        select atomno=3 or atomno=6; translateSelected {0 ${dy_dn} 0};
+        delay ${delay};
+      `;
+    }
+
+    script += `
+      delay 0.3;
+      background echo "乙烯 σ(xz) 反射完成";
+      delay 0.6;
+      background echo OFF;
+      restore orientation ethView;
+    `;
+
+    Jmol.script(myJmol, script);
+
+    // 动画完成后的清理
+    const totalTime = (steps * delay + 1.5) * 1000;
+    setTimeout(() => {
+      isAnimating = false;
+      opStatus.classList.remove('loading');
+      opStatus.textContent = "乙烯 σ(xz) 镜面反射完成";
+
+      // 2 秒后删除平面
+      setTimeout(() => {
+        Jmol.script(myJmol, "draw ethSigmaXZFill delete;");
+        Jmol.script(myJmol, "draw ethSigmaXZMesh delete;");
+        if (!isAnimating) {
+          opStatus.textContent = "可用操作: C₂";
+        }
+      }, 2000);
+    }, totalTime);
+  }, 400);
+}
 function playEthyleneSigmaYz() {
   if (currentFile !== 'H2C=CH2.mol' || isAnimating) return;
   isAnimating = true;
+
   const opStatus = document.getElementById('op-status');
   opStatus.textContent = "正在播放乙烯 σ(yz) 镜面反射动画...";
   opStatus.classList.add('loading');
-  Jmol.script(myJmol, "save orientation userView;");
-  Jmol.script(myJmol, ethyleneBaseModel + "restore orientation userView;");
-  const steps = 20;
-  const delay = 0.02;
-  const xC = 0.6672;
-  const dxC = (-2 * xC) / steps;
-  const xH = 1.2213;
-  const dxH = (-2 * xH) / steps;
-  let script = "set echo off; delay 0.2;";
-  for (let i = 0; i < steps; i++) {
-    script += `
-      select atomno=1; translateSelected {${(-dxC).toFixed(4)} 0 0};
-      select atomno=2; translateSelected {${dxC.toFixed(4)} 0 0};
-      select atomno=3 or atomno=4; translateSelected {${(-dxH).toFixed(4)} 0 0};
-      select atomno=5 or atomno=6; translateSelected {${dxH.toFixed(4)} 0 0};
-      delay ${delay};
-    `;
-  }
-  script += `
-    delay 0.3;
-    calculate pointgroup;
-    draw pointgroup;
-    spin off;
-    background echo "乙烯 σ(yz) 镜面反射动画完成";
-    delay 0.6;
-    background echo OFF;
-  `;
-  Jmol.script(myJmol, script);
-  setTimeout(() => {
-    isAnimating = false;
-    opStatus.classList.remove('loading');
-    opStatus.textContent = "乙烯 σ(yz) 镜面反射完成";
-    setTimeout(() => { opStatus.textContent = "可用操作: C₂"; }, 1500);
-  }, (steps * delay + 1.2) * 1000);
-}
 
+  // 保存视角，加载干净模型
+  Jmol.script(myJmol, "save orientation ethView;");
+  Jmol.script(myJmol, ethyleneBaseModel + "restore orientation ethView;");
+
+  // 等待模型稳定后绘制平面
+  setTimeout(() => {
+    Jmol.script(myJmol, "isosurface delete;");
+    Jmol.script(myJmol, "draw delete;");
+
+    // 绘制 σ(yz) 平面（x = 0）
+    Jmol.script(myJmol,
+      "draw ethSigmaYZFill POLYGON 4 " +
+      "{0.0 -3.0 -3.0} {0.0 3.0 -3.0} {0.0 3.0 3.0} {0.0 -3.0 3.0} " +
+      "color [51,133,255] translucent 0.35;"
+    );
+    Jmol.script(myJmol,
+      "draw ethSigmaYZMesh MESH 4 " +
+      "{0.0 -3.0 -3.0} {0.0 3.0 -3.0} {0.0 3.0 3.0} {0.0 -3.0 3.0} " +
+      "color [30,80,200];"
+    );
+
+    // 执行原子互换动画（原逻辑）
+    const steps = 20;
+    const delay = 0.02;
+    const xC = 0.6672;
+    const dxC = (-2 * xC) / steps;  // C1 向左，C2 向右
+    const xH = 1.2213;
+    const dxH = (-2 * xH) / steps;  // H 原子同样互换
+
+    let script = "set echo off; delay 0.2;";
+    for (let i = 0; i < steps; i++) {
+      script += `
+        select atomno=1; translateSelected {${(-dxC).toFixed(4)} 0 0};
+        select atomno=2; translateSelected {${dxC.toFixed(4)} 0 0};
+        select atomno=3 or atomno=4; translateSelected {${(-dxH).toFixed(4)} 0 0};
+        select atomno=5 or atomno=6; translateSelected {${dxH.toFixed(4)} 0 0};
+        delay ${delay};
+      `;
+    }
+
+    script += `
+      delay 0.3;
+      background echo "乙烯 σ(yz) 反射完成";
+      delay 0.6;
+      background echo OFF;
+      restore orientation ethView;
+    `;
+
+    Jmol.script(myJmol, script);
+
+    // 动画完成后的清理
+    const totalTime = (steps * delay + 1.5) * 1000;
+    setTimeout(() => {
+      isAnimating = false;
+      opStatus.classList.remove('loading');
+      opStatus.textContent = "乙烯 σ(yz) 镜面反射完成";
+
+      // 2 秒后删除平面
+      setTimeout(() => {
+        Jmol.script(myJmol, "draw ethSigmaYZFill delete;");
+        Jmol.script(myJmol, "draw ethSigmaYZMesh delete;");
+        if (!isAnimating) {
+          opStatus.textContent = "可用操作: C₂";
+        }
+      }, 2000);
+    }, totalTime);
+  }, 400);
+}
 /* ================================================================
    乙烯 σ(xy) 镜面反射 —— 恒等操作提示
    乙烯为平面分子（分子平面 = xy 平面），σ(xy) 将所有原子映射回自身。
