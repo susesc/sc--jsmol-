@@ -2134,70 +2134,68 @@ function playSigmaVxz() {
   if (currentFile !== 'water.xyz' || isAnimating) return;
   isAnimating = true;
 
-  // ── 清除旧平面，绘制 σᵥ(xz) 对称平面（蓝色半透明 + 网格线）──
-  // xz 平面（y=0）：O 在平面上，H1(y=+0.757) 与 H2(y=-0.757) 关于该平面对称
-  Jmol.script(myJmol, "isosurface delete;");
-  Jmol.script(myJmol, "draw delete;");
-
-  // 半透明蓝色填充平面（xz 平面，y=0），尺寸覆盖分子
-  Jmol.script(myJmol,
-      "draw sigmaPlaneFill POLYGON 4 " +
-      "{-3.0 0.0 -3.0} {3.0 0.0 -3.0} {3.0 0.0 3.0} {-3.0 0.0 3.0} " +
-      "color translucent 0.35 [51,133,255];"
-  );
-
-  // 网格边框，使平面轮廓清晰可见
-  Jmol.script(myJmol,
-      "draw sigmaPlaneMesh MESH 4 " +
-      "{-3.0 0.0 -3.0} {3.0 0.0 -3.0} {3.0 0.0 3.0} {-3.0 0.0 3.0} " +
-      "color [30,80,200] width 0.03;"
-  );
-
-  // 平面法向量指示线（沿 y 轴），展示反射方向
-  Jmol.script(myJmol,
-      "draw sigmaNormal VECTOR {0.0 0.0 0.0} {0.0 0.8 0.0} " +
-      "color [51,133,255] width 0.06 dash 4;"
-  );
-  Jmol.script(myJmol,
-      "draw sigmaNormal VECTOR {0.0 0.0 0.0} {0.0 -0.8 0.0} " +
-      "color [51,133,255] width 0.06 dash 4;"
-  );
-
   const btn = document.getElementById("btnSigmaV");
   btn.disabled = true;
   btn.classList.add("active");
   btn.textContent = "动画播放中...";
   document.getElementById('op-status').textContent = "正在播放 σᵥ(xz) 反射动画 — 两 H 原子沿蓝色对称面互换...";
 
-  // 保存当前视角，重载干净模型
+  // 保存视角，重载干净模型（此时不清除任何绘制对象，以免被模型加载覆盖）
   Jmol.script(myJmol, "save orientation sigmaView;");
   Jmol.script(myJmol, h2oBaseModel + "restore orientation sigmaView;");
 
-  // 水分子预定义坐标（water.xyz）:
-  //   atomno=1: O  (0.000,  0.000,  0.000)  — 在 xz 平面上，不动
-  //   atomno=2: H1 (0.000,  0.757,  0.586)  — y>0 侧
-  //   atomno=3: H2 (0.000, -0.757,  0.586)  — y<0 侧
-  // σᵥ(xz) 反射: y → -y，H1 与 H2 互换位置
+  // 等待模型加载完毕后，再绘制平面并启动原子互换动画
+  setTimeout(() => {
+    // 清除可能残留的绘制对象
+    Jmol.script(myJmol, "isosurface delete;");
+    Jmol.script(myJmol, "draw delete;");
+
+    // 蓝色半透明填充平面（xz 平面，y=0）
+    Jmol.script(myJmol,
+      "draw sigmaPlaneFill POLYGON 4 " +
+      "{-3.0 0.0 -3.0} {3.0 0.0 -3.0} {3.0 0.0 3.0} {-3.0 0.0 3.0} " +
+      "color [51,133,255] translucent 0.35;"
+    );
+
+    // 网格边框，增强可视性
+    Jmol.script(myJmol,
+      "draw sigmaPlaneMesh MESH 4 " +
+      "{-3.0 0.0 -3.0} {3.0 0.0 -3.0} {3.0 0.0 3.0} {-3.0 0.0 3.0} " +
+      "color [30,80,200];"
+    );
+
+    // 平面法向量虚线（展示反射方向）
+    Jmol.script(myJmol,
+      "draw sigmaNormal VECTOR {0.0 0.0 0.0} {0.0 0.8 0.0} " +
+      "color [51,133,255] width 0.06 dash 4;"
+    );
+    Jmol.script(myJmol,
+      "draw sigmaNormal VECTOR {0.0 0.0 0.0} {0.0 -0.8 0.0} " +
+      "color [51,133,255] width 0.06 dash 4;"
+    );
+
+    // 开始原子互换动画
+    startSigmaVxzAtomSwap();
+  }, 400);
+}
+function startSigmaVxzAtomSwap() {
   var steps = 20;
   var delay = 0.06;
+  // 两个氢原子的 y 坐标分别为 +0.757 和 -0.757，互换时沿 y 方向移动
+  var dy1 = (-0.757 - 0.757) / steps;   // H1 (atomno=2) 向 y 负方向移动
+  var dy2 = (0.757 - (-0.757)) / steps; // H2 (atomno=3) 向 y 正方向移动
 
-  // 两 H 互换：H1(atomno=2) → H2 位置，H2(atomno=3) → H1 位置
-  var dx1 = 0, dy1 = (-0.757 - 0.757) / steps, dz1 = 0;      // H1 沿 y 负方向移动
-  var dx2 = 0, dy2 = (0.757 - (-0.757)) / steps, dz2 = 0;    // H2 沿 y 正方向移动
-
-  // 构建逐步平移动画脚本
   var script = "set echo off;";
   for (var i = 0; i < steps; i++) {
     script += `
       select atomno=2;
-      translateSelected {${dx1.toFixed(4)} ${dy1.toFixed(4)} ${dz1.toFixed(4)}};
+      translateSelected {0 ${dy1.toFixed(4)} 0};
       select atomno=3;
-      translateSelected {${dx2.toFixed(4)} ${dy2.toFixed(4)} ${dz2.toFixed(4)}};
+      translateSelected {0 ${dy2.toFixed(4)} 0};
       delay ${delay};
     `;
   }
 
-  // 动画结束后展示结果
   script += `
     delay 0.5;
     background echo "σᵥ(xz) 反射完成：H1 ↔ H2 已互换";
@@ -2208,16 +2206,16 @@ function playSigmaVxz() {
 
   Jmol.script(myJmol, script);
 
-  // 动画完成回调
   var totalTime = (steps * delay + 2.0) * 1000;
   setTimeout(() => {
     isAnimating = false;
+    var btn = document.getElementById("btnSigmaV");
     btn.disabled = false;
     btn.classList.remove("active");
     btn.textContent = "播放 σᵥ(xz) 连续反射";
     document.getElementById('op-status').textContent = "σᵥ(xz) 反射完成 — 两 H 原子已沿蓝色对称面互换";
 
-    // 延迟清除蓝色平面及辅助元素（保留 3 秒供观察）
+    // 3 秒后删除所有辅助平面元素
     setTimeout(() => {
       Jmol.script(myJmol, "draw sigmaPlaneFill delete;");
       Jmol.script(myJmol, "draw sigmaPlaneMesh delete;");
