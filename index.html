@@ -566,6 +566,21 @@ button:disabled {
       </div>
     </div>
 
+<div class="section hidden" id="ch4SpecialSection">
+  <div class="section-title">甲烷（Td）旋转轴</div>
+  <div style="font-size:12px;color:#374151;font-weight:600;padding-left:2px;margin-bottom:2px;">C₃ 旋转轴（4条）</div>
+  <button id="btnCH4C3_1" class="ethylene-c2-btn" onclick="doCH4C3(1)">C₃₁ 轴（过C-H）</button>
+  <button id="btnCH4C3_2" class="ethylene-c2-btn" onclick="doCH4C3(2)">C₃₂ 轴（过C-H）</button>
+  <button id="btnCH4C3_3" class="ethylene-c2-btn" onclick="doCH4C3(3)">C₃₃ 轴（过C-H）</button>
+  <button id="btnCH4C3_4" class="ethylene-c2-btn" onclick="doCH4C3(4)">C₃₄ 轴（过C-H）</button>
+  <div style="font-size:12px;color:#374151;font-weight:600;padding-left:2px;margin:6px 0 2px;">C₂ 旋转轴（3条）</div>
+  <button id="btnCH4C2_1" class="ethylene-c2-btn" onclick="doCH4C2(1)">C₂₁ 轴（过对边中点）</button>
+  <button id="btnCH4C2_2" class="ethylene-c2-btn" onclick="doCH4C2(2)">C₂₂ 轴（过对边中点）</button>
+  <button id="btnCH4C2_3" class="ethylene-c2-btn" onclick="doCH4C2(3)">C₂₃ 轴（过对边中点）</button>
+  <div class="note">甲烷具有 4 条 C₃ 轴（沿 C-H 键方向）和 3 条 C₂ 轴（通过对边中点连线）。点击按钮演示对应轴的旋转，动画完成后自动恢复原构型与视角。
+       </div>
+</div>
+
     <div class="section hidden" id="benzeneSpecialSection">
       <div class="section-title">苯（D₆ʰ）对称操作动画</div>
 
@@ -1449,13 +1464,14 @@ function updateSpecialSectionVisibility() {
   const ptcl4Section = document.getElementById("ptcl4SpecialSection");
   const tetraSection = document.getElementById("tetrahedronSpecialSection");
   const n4s4f4Section = document.getElementById("n4s4f4C2Section"); // 新增
+const ch4Section = document.getElementById("ch4SpecialSection");
 
-  [h2oSection, c2h2cl2Section, chcl3Section, co2Section,
+[h2oSection, c2h2cl2Section, chcl3Section, co2Section,
    ethyleneC2Section, ethyleneSpecialSection, cyclohexaneSection,
    cyclohexaneS6Section, cyclohexaneSigmaDSection, ferroceneSection,
    bf3Section, ch3ccl3Section, benzeneSection, ptcl4Section, tetraSection,
-   n4s4f4Section // 新增
-  ].forEach(s => s && s.classList.add("hidden"));
+   n4s4f4Section, ch4Section
+].forEach(s => s && s.classList.add("hidden"));
 
   if (currentFile === 'water.xyz') {
     h2oSection.classList.remove("hidden");
@@ -1487,7 +1503,9 @@ function updateSpecialSectionVisibility() {
     if (ts) ts.classList.remove("hidden");
   } else if (currentFile === 'N4S4F4.mol') {  // 新增
     n4s4f4Section.classList.remove("hidden");
-  }
+  } else if (currentFile === 'CH4.mol') {
+    ch4Section.classList.remove("hidden");
+}}
 }
 
 function saveViewAndReset(baseModel) {
@@ -4150,6 +4168,96 @@ function setN4S4F4Buttons(disabled, activeId) {
     btn.disabled = disabled;
     btn.classList.toggle('active', !!(activeId && id === activeId));
   });
+}
+// ================================================================
+// 甲烷多条 C₃ / C₂ 轴旋转
+// ================================================================
+
+function setCH4CnButtons(disabled, activeId) {
+  var ids = [
+    'btnCH4C3_1','btnCH4C3_2','btnCH4C3_3','btnCH4C3_4',
+    'btnCH4C2_1','btnCH4C2_2','btnCH4C2_3'
+  ];
+  ids.forEach(function(id) {
+    var btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = disabled;
+    btn.classList.toggle('active', !!(activeId && id === activeId));
+  });
+}
+
+function doCH4C3(index) {
+  if (isAnimating || currentFile !== 'CH4.mol') return;
+  isAnimating = true;
+  var btnId = 'btnCH4C3_' + index;
+  setCH4CnButtons(true, btnId);
+  var btn = document.getElementById(btnId);
+  var origText = btn.textContent;
+  btn.textContent = 'C₃' + index + ' 旋转中...';
+  var opStatus = document.getElementById('op-status');
+  opStatus.textContent = '甲烷 C₃' + index + ' 轴旋转 120° ...';
+  opStatus.classList.add('loading');
+
+  Jmol.script(myJmol, 'save orientation ch4View;');
+  Jmol.script(myJmol, 'load CH4.mol\ncenter\nzoom 120\nspin off\nrestore orientation ch4View;');
+
+  setTimeout(function() {
+    Jmol.script(myJmol, 'calculate pointgroup; draw pointgroup;');
+    setTimeout(function() {
+      var axisName = '$pgva_0_c3_' + index;
+      Jmol.script(myJmol, 'spin ' + axisName + ' 120 300;');
+      setTimeout(function() {
+        Jmol.script(myJmol, 'load CH4.mol\ncenter\nzoom 120\nspin off\nrestore orientation ch4View;');
+        setTimeout(function() {
+          isAnimating = false;
+          setCH4CnButtons(false, null);
+          btn.textContent = origText;
+          opStatus.classList.remove('loading');
+          opStatus.textContent = '甲烷 C₃' + index + ' 旋转完成（已恢复原构型）';
+          setTimeout(function() {
+            if (!isAnimating) opStatus.textContent = '可用操作: C₃, C₂';
+          }, 2000);
+        }, 400);
+      }, 1200);
+    }, 500);
+  }, 500);
+}
+
+function doCH4C2(index) {
+  if (isAnimating || currentFile !== 'CH4.mol') return;
+  isAnimating = true;
+  var btnId = 'btnCH4C2_' + index;
+  setCH4CnButtons(true, btnId);
+  var btn = document.getElementById(btnId);
+  var origText = btn.textContent;
+  btn.textContent = 'C₂' + index + ' 旋转中...';
+  var opStatus = document.getElementById('op-status');
+  opStatus.textContent = '甲烷 C₂' + index + ' 轴旋转 180° ...';
+  opStatus.classList.add('loading');
+
+  Jmol.script(myJmol, 'save orientation ch4View;');
+  Jmol.script(myJmol, 'load CH4.mol\ncenter\nzoom 120\nspin off\nrestore orientation ch4View;');
+
+  setTimeout(function() {
+    Jmol.script(myJmol, 'calculate pointgroup; draw pointgroup;');
+    setTimeout(function() {
+      var axisName = '$pgva_0_c2_' + index;
+      Jmol.script(myJmol, 'spin ' + axisName + ' 180 300;');
+      setTimeout(function() {
+        Jmol.script(myJmol, 'load CH4.mol\ncenter\nzoom 120\nspin off\nrestore orientation ch4View;');
+        setTimeout(function() {
+          isAnimating = false;
+          setCH4CnButtons(false, null);
+          btn.textContent = origText;
+          opStatus.classList.remove('loading');
+          opStatus.textContent = '甲烷 C₂' + index + ' 旋转完成（已恢复原构型）';
+          setTimeout(function() {
+            if (!isAnimating) opStatus.textContent = '可用操作: C₃, C₂';
+          }, 2000);
+        }, 400);
+      }, 1200);
+    }, 500);
+  }, 500);
 }
 
 function doN4S4F4C2(index) {
