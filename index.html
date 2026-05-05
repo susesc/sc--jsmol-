@@ -1463,15 +1463,15 @@ function updateSpecialSectionVisibility() {
   const benzeneSection = document.getElementById("benzeneSpecialSection");
   const ptcl4Section = document.getElementById("ptcl4SpecialSection");
   const tetraSection = document.getElementById("tetrahedronSpecialSection");
-  const n4s4f4Section = document.getElementById("n4s4f4C2Section"); // 新增
-const ch4Section = document.getElementById("ch4SpecialSection");
+  const n4s4f4Section = document.getElementById("n4s4f4C2Section");
+  const ch4Section = document.getElementById("ch4SpecialSection");
 
-[h2oSection, c2h2cl2Section, chcl3Section, co2Section,
+  [h2oSection, c2h2cl2Section, chcl3Section, co2Section,
    ethyleneC2Section, ethyleneSpecialSection, cyclohexaneSection,
    cyclohexaneS6Section, cyclohexaneSigmaDSection, ferroceneSection,
    bf3Section, ch3ccl3Section, benzeneSection, ptcl4Section, tetraSection,
    n4s4f4Section, ch4Section
-].forEach(s => s && s.classList.add("hidden"));
+  ].forEach(s => s && s.classList.add("hidden"));
 
   if (currentFile === 'water.xyz') {
     h2oSection.classList.remove("hidden");
@@ -1501,11 +1501,11 @@ const ch4Section = document.getElementById("ch4SpecialSection");
   } else if (currentFile === 'tetrahedron.xyz') {
     const ts = document.getElementById("tetrahedronSpecialSection");
     if (ts) ts.classList.remove("hidden");
-  } else if (currentFile === 'N4S4F4.mol') {  // 新增
+  } else if (currentFile === 'N4S4F4.mol') {
     n4s4f4Section.classList.remove("hidden");
   } else if (currentFile === 'CH4.mol') {
     ch4Section.classList.remove("hidden");
-}
+  }
 }
 
 function saveViewAndReset(baseModel) {
